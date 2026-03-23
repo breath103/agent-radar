@@ -44,6 +44,21 @@ class NotificationWatcher {
                 try? fm.removeItem(at: file)
                 continue
             }
+            // Special test command: move window to a specific screen index
+            if payload.hook_event == "_move_to_screen" {
+                let screenIndex = payload.shell_pid ?? 1
+                if screenIndex < NSScreen.screens.count {
+                    let screen = NSScreen.screens[screenIndex]
+                    if let window = NSApplication.shared.windows.first(where: { $0.isVisible || $0.canBecomeMain }) {
+                        let sf = screen.visibleFrame
+                        let ws = window.frame.size
+                        window.setFrame(NSRect(x: sf.midX - ws.width/2, y: sf.midY - ws.height/2, width: ws.width, height: ws.height), display: true)
+                    }
+                }
+                try? fm.removeItem(at: file)
+                continue
+            }
+
             store.handleNotification(payload)
             try? fm.removeItem(at: file)
             hadNew = true

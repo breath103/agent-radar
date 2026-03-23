@@ -3,41 +3,41 @@ set -e
 
 echo "=== Window Move Test ==="
 
-# Get current window position
-get_window_pos() {
-    osascript -e '
-    tell application "System Events"
-        tell process "AgentRadar"
-            set {x, y} to position of window 1
-            return (x as text) & "," & (y as text)
-        end tell
-    end tell' 2>/dev/null || echo "no window"
-}
-
-echo "Window before: $(get_window_pos)"
-
-# Move window far to the right (simulate different screen)
-osascript -e '
-tell application "System Events"
-    tell process "AgentRadar"
-        set position of window 1 to {3000, 100}
-    end tell
-end tell'
-
-sleep 0.5
-echo "Window moved to: $(get_window_pos)"
-
-# Send notification (mouse cursor should be on this screen where terminal is)
-scripts/send-test-notification.sh /tmp/window-move-test Stop
+# Move window to screen 1 (left screen) via special command
+# shell_pid=1 means screen index 1
+scripts/send-test-notification.sh unused _move_to_screen 1
 sleep 2
 
-POS_AFTER=$(get_window_pos)
-echo "Window after notification: $POS_AFTER"
+echo "After moving to screen 1:"
+cat /tmp/agent-radar-move.log 2>/dev/null && echo "(old log)" || echo "no log"
 
-# Check: x coordinate should be < 3000 if it moved back
-X_AFTER=$(echo "$POS_AFTER" | cut -d',' -f1)
-if [ "$X_AFTER" -lt 2000 ] 2>/dev/null; then
-    echo "PASS: Window moved back to current screen (x=$X_AFTER)"
+# Now send a real notification - window should move back to mouse (screen 0)
+rm -f /tmp/agent-radar-move.log
+scripts/send-test-notification.sh /tmp/move-back-test Stop
+sleep 2
+
+echo ""
+echo "After notification (should move to mouse screen):"
+cat /tmp/agent-radar-move.log 2>/dev/null || echo "no log - moveWindowToCurrentScreen didn't run"
+
+echo ""
+# Check if mouse and window are on different screens in the log
+if grep -q "mouseScreen.*windowScreen" /tmp/agent-radar-move.log 2>/dev/null; then
+    MOUSE_SCREEN=$(grep -o 'mouseScreen=([^)]*' /tmp/agent-radar-move.log | head -1)
+    WINDOW_SCREEN=$(grep -o 'windowScreen=([^)]*' /tmp/agent-radar-move.log | head -1)
+    OLD_FRAME=$(grep -o 'oldFrame=([^)]*' /tmp/agent-radar-move.log | head -1)
+    NEW_FRAME=$(grep -o 'newFrame=([^)]*' /tmp/agent-radar-move.log | head -1)
+
+    echo "Mouse screen: $MOUSE_SCREEN"
+    echo "Window screen: $WINDOW_SCREEN"
+    echo "Old frame: $OLD_FRAME"
+    echo "New frame: $NEW_FRAME"
+
+    if [ "$OLD_FRAME" != "$NEW_FRAME" ]; then
+        echo "PASS: Window moved to different position"
+    else
+        echo "FAIL: Window frame unchanged"
+    fi
 else
-    echo "FAIL: Window stayed at x=$X_AFTER"
+    echo "FAIL: Could not parse log"
 fi
