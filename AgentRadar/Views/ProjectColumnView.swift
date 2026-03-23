@@ -1,5 +1,9 @@
 import SwiftUI
 
+extension Notification.Name {
+    static let hidePanel = Notification.Name("hidePanel")
+}
+
 struct ProjectColumnView: View {
     let project: Project
     @Bindable var store: ProjectStore
@@ -28,6 +32,7 @@ struct ProjectColumnView: View {
                         GhosttyFocuser.focusTerminal(shellPID: pid)
                     }
                     store.clearNotifications(for: project.id)
+                    NotificationCenter.default.post(name: .hidePanel, object: nil)
                 } label: {
                     Label("Terminal", systemImage: "terminal")
                         .font(.caption)

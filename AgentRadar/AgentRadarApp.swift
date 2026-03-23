@@ -67,6 +67,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return event
         }
 
+        NotificationCenter.default.addObserver(forName: .hidePanel, object: nil, queue: .main) { [weak self] _ in
+            self?.hidePanel()
+        }
+
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             if mods == [.command, .shift],
@@ -95,6 +99,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         panel.setFrame(NSRect(x: x, y: y, width: panelWidth, height: panelHeight), display: true)
     }
 
+    func hidePanel() {
+        panel.orderOut(nil)
+    }
+
     func showPanel() {
         positionPanelBelowStatusItem()
         panel.orderFrontRegardless()
@@ -107,5 +115,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             GhosttyFocuser.focusTerminal(shellPID: pid)
         }
         store.clearNotifications(for: project.id)
+        hidePanel()
     }
 }
