@@ -1,0 +1,3 @@
+- Use `@Observable` macro, NOT `ObservableObject`/`@Published`/`@StateObject`/`@EnvironmentObject`. Use `@State`, `@Environment`, and `@Bindable` instead.
+- No Claude attribution in commits or file headers.
+- Build with `scripts/build.sh`. Never run raw xcodebuild commands directly.

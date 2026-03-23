@@ -1,0 +1,41 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -project AgentRadar.xcodeproj \
+            -scheme AgentRadar \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            -derivedDataPath build \
+            build
+
+      - name: Package
+        run: |
+          cd build/Build/Products/Release
+          ditto -c -k --keepParent AgentRadar.app AgentRadar.zip
+
+      - name: Upload Release Asset
+        if: github.event_name == 'release'
+        run: gh release upload ${{ github.event.release.tag_name }} build/Build/Products/Release/AgentRadar.zip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
