@@ -1,45 +1,40 @@
 # AgentRadar
 
-Native macOS app for managing multiple Claude Code agentic coding sessions. Each session's notifications appear as a column with quick actions to jump to the terminal or IDE.
+Native macOS menu bar app for managing multiple Claude Code agentic coding sessions. Each session's notifications appear as a column with quick actions to jump to the terminal or IDE.
 
 ## Install
 
 ```bash
 # Build and install to /Applications
 scripts/build.sh
+
+# Install hook script
+scripts/install-hooks.sh
 ```
 
 ## Setup
 
-### 1. Hook configuration
+### Hook configuration
 
-Add the following to the top of your Claude Code hook script (e.g. `~/.claude/scripts/on-stop.sh`):
+Run `scripts/install-hooks.sh` to copy the hook script to `~/.claude/scripts/agent-radar-hook.sh`.
 
-```bash
-SHELL_PID=$(ps -o ppid= -p $PPID | tr -d ' ')
-NOTIFY_DIR="$HOME/.agent-radar/notifications"
-mkdir -p "$NOTIFY_DIR"
-cat > "$NOTIFY_DIR/$(date +%s)-$$.json" <<EOF
-{"pwd":"$(pwd)","hook_event":"${CLAUDE_HOOK_EVENT:-Stop}","shell_pid":$SHELL_PID,"timestamp":$(date +%s)}
-EOF
-```
-
-### 2. Claude settings.json
-
-Make sure your `~/.claude/settings.json` has hooks for both `Stop` and `Notification` events pointing to your hook script:
+Then add the following to your `~/.claude/settings.json`:
 
 ```json
 {
   "hooks": {
-    "Stop": [{ "matcher": "", "hooks": [{ "type": "command", "command": "~/.claude/scripts/on-stop.sh" }] }],
-    "Notification": [{ "matcher": "", "hooks": [{ "type": "command", "command": "~/.claude/scripts/on-stop.sh" }] }]
+    "Stop": [{ "matcher": "", "hooks": [{ "type": "command", "command": "~/.claude/scripts/agent-radar-hook.sh" }] }],
+    "Notification": [{ "matcher": "", "hooks": [{ "type": "command", "command": "~/.claude/scripts/agent-radar-hook.sh" }] }]
   }
 }
 ```
 
-### 3. Ghostty terminal focusing
+The hook script skips notifications when Ghostty is the frontmost app (since you're already looking at the terminal).
 
-The "Go to Terminal" button uses Ghostty's AppleScript API. It reads cached window/tab IDs from `/tmp/ghostty-claude-{pid}` which are created by the existing hook script.
+## Keyboard Shortcuts
+
+- `Cmd+Shift+R` - Toggle panel (global, works even when app is not focused)
+- `Cmd+Shift+L` - Jump to terminal of most recently active project and close panel
 
 ## How it works
 
@@ -47,20 +42,13 @@ The "Go to Terminal" button uses Ghostty's AppleScript API. It reads cached wind
 - App polls the directory every second
 - Each unique `pwd` becomes a project column
 - Columns show notification history with timestamps
-- "Terminal" button focuses the Ghostty tab running that session
+- "Terminal" button focuses the Ghostty tab, clears notifications, and closes panel
 - "VSCode" button opens the project in VS Code
 
 ## Scripts
 
 - `scripts/build.sh` - Debug build, install to /Applications, launch
 - `scripts/build-release.sh` - Release build
+- `scripts/install-hooks.sh` - Install hook script to ~/.claude/scripts/
 - `scripts/test-e2e.sh` - E2E test using Accessibility API
-- `scripts/screenshot.sh` - Screenshot the app
-
-## Test
-
-```bash
-# Send a test notification
-mkdir -p ~/.agent-radar/notifications
-echo '{"pwd":"/tmp/test","hook_event":"Stop","shell_pid":1234,"timestamp":'$(date +%s)'}' > ~/.agent-radar/notifications/test.json
-```
+- `scripts/send-test-notification.sh` - Send a test notification
