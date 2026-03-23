@@ -1,6 +1,8 @@
 import Foundation
+import Observation
 
-struct Project: Identifiable, Hashable {
+@Observable
+class Project: Identifiable, Hashable {
     let id: String
     var displayName: String
     var notifications: [AgentNotification]

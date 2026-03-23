@@ -64,20 +64,34 @@ struct ProjectColumnView: View {
 
             Spacer(minLength: 0)
 
-            if !project.notifications.isEmpty {
-                Divider()
-                HStack {
+            Divider()
+            HStack {
+                if !project.notifications.isEmpty {
                     Text("\(project.notifications.count) notifications")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
-                    Spacer()
-                    Button("Clear") {
-                        store.clearNotifications(for: project.id)
-                    }
-                    .font(.caption2)
                 }
-                .padding(8)
+                Spacer()
+                if !project.notifications.isEmpty {
+                    Button(role: .destructive) {
+                        store.clearNotifications(for: project.id)
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.caption2)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("clear")
+                }
+                Button(role: .destructive) {
+                    store.removeProject(project.id)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption2)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("remove")
             }
+            .padding(8)
         }
         .frame(width: 280)
         .background(.background)

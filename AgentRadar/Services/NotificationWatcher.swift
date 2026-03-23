@@ -16,8 +16,9 @@ class NotificationWatcher {
         try? FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
         processFiles()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
             Task { @MainActor in
-                self?.processFiles()
+                self.processFiles()
             }
         }
     }

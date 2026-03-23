@@ -13,12 +13,12 @@ class ProjectStore {
             timestamp: Date(timeIntervalSince1970: payload.timestamp)
         )
 
-        if let index = projects.firstIndex(where: { $0.id == pwd }) {
-            projects[index].notifications.insert(notification, at: 0)
-            projects[index].shellPID = payload.shell_pid ?? projects[index].shellPID
-            projects[index].lastActivity = Date()
+        if let project = projects.first(where: { $0.id == pwd }) {
+            project.notifications.insert(notification, at: 0)
+            project.shellPID = payload.shell_pid ?? project.shellPID
+            project.lastActivity = Date()
         } else {
-            var project = Project(pwd: pwd)
+            let project = Project(pwd: pwd)
             project.notifications.append(notification)
             project.shellPID = payload.shell_pid
             projects.append(project)
@@ -26,8 +26,8 @@ class ProjectStore {
     }
 
     func clearNotifications(for projectID: String) {
-        if let index = projects.firstIndex(where: { $0.id == projectID }) {
-            projects[index].notifications.removeAll()
+        if let project = projects.first(where: { $0.id == projectID }) {
+            project.notifications.removeAll()
         }
     }
 
