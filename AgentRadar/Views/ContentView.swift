@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ContentView: View {
     @Bindable var store: ProjectStore
-    @State private var watcher: NotificationWatcher?
 
     var body: some View {
         Group {
@@ -29,11 +28,6 @@ struct ContentView: View {
                     .padding()
                 }
             }
-        }
-        .onAppear {
-            let w = NotificationWatcher(store: store)
-            w.start()
-            watcher = w
         }
     }
 }

@@ -27,6 +27,7 @@ struct ProjectColumnView: View {
                     if let pid = project.shellPID {
                         GhosttyFocuser.focusTerminal(shellPID: pid)
                     }
+                    store.clearNotifications(for: project.id)
                 } label: {
                     Label("Terminal", systemImage: "terminal")
                         .font(.caption)
