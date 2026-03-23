@@ -6,6 +6,7 @@ class NotificationWatcher {
     private let directoryURL: URL
     private let store: ProjectStore
     private var timer: Timer?
+    private weak var lastMouseScreen: NSScreen?
 
     init(store: ProjectStore) {
         self.store = store
@@ -16,10 +17,12 @@ class NotificationWatcher {
     func start() {
         try? FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
         processFiles()
+        lastMouseScreen = currentMouseScreen()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self else { return }
             Task { @MainActor in
                 self.processFiles()
+                self.followMouseScreen()
             }
         }
     }
@@ -27,6 +30,11 @@ class NotificationWatcher {
     func stop() {
         timer?.invalidate()
         timer = nil
+    }
+
+    private func currentMouseScreen() -> NSScreen? {
+        let mouseLocation = NSEvent.mouseLocation
+        return NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) }
     }
 
     private func processFiles() {
@@ -44,7 +52,6 @@ class NotificationWatcher {
                 try? fm.removeItem(at: file)
                 continue
             }
-            // Special test command: move window to a specific screen index
             if payload.hook_event == "_move_to_screen" {
                 let screenIndex = payload.shell_pid ?? 1
                 if screenIndex < NSScreen.screens.count {
@@ -69,11 +76,32 @@ class NotificationWatcher {
         }
     }
 
+    private func followMouseScreen() {
+        guard let window = NSApplication.shared.windows.first(where: { $0.isVisible }),
+              let mouseScreen = currentMouseScreen(),
+              let windowScreen = window.screen,
+              mouseScreen != windowScreen else { return }
+
+        // Only act when mouse screen actually changed
+        if mouseScreen == lastMouseScreen { return }
+        lastMouseScreen = mouseScreen
+
+        let oldFrame = windowScreen.visibleFrame
+        let newFrame = mouseScreen.visibleFrame
+
+        let relX = (window.frame.origin.x - oldFrame.origin.x) / oldFrame.width
+        let relY = (window.frame.origin.y - oldFrame.origin.y) / oldFrame.height
+
+        let x = newFrame.origin.x + relX * newFrame.width
+        let y = newFrame.origin.y + relY * newFrame.height
+
+        window.setFrame(NSRect(x: x, y: y, width: window.frame.width, height: window.frame.height), display: true, animate: false)
+    }
+
     private func showWindow() {
         guard let window = NSApplication.shared.windows.first(where: { $0.isVisible || $0.canBecomeMain }) else { return }
 
-        let mouseLocation = NSEvent.mouseLocation
-        let mouseScreen = NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) }
+        let mouseScreen = currentMouseScreen()
         let onCurrentScreen = (mouseScreen == window.screen)
 
         if onCurrentScreen {
