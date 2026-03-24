@@ -73,9 +73,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            if mods == [.command, .shift],
-               event.charactersIgnoringModifiers?.lowercased() == "r" {
-                self?.togglePanel()
+            let key = event.charactersIgnoringModifiers?.lowercased()
+            if mods == [.command, .shift] {
+                if key == "r" {
+                    self?.togglePanel()
+                }
+                if key == "l" {
+                    self?.goToLastNotifiedTerminal()
+                }
             }
         }
     }
