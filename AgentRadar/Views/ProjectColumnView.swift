@@ -10,6 +10,7 @@ struct ProjectColumnView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // Header
             VStack(alignment: .leading, spacing: 4) {
                 Text(project.displayName)
                     .font(.headline)
@@ -26,6 +27,7 @@ struct ProjectColumnView: View {
 
             Divider()
 
+            // Action buttons
             HStack(spacing: 8) {
                 Button {
                     GhosttyFocuser.focusTerminal(pwd: project.id)
@@ -33,22 +35,25 @@ struct ProjectColumnView: View {
                     NotificationCenter.default.post(name: .hidePanel, object: nil)
                 } label: {
                     Label("Terminal", systemImage: "terminal")
-                        .font(.caption)
                 }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
 
                 Button {
                     GhosttyFocuser.openInVSCode(path: project.id)
                     NotificationCenter.default.post(name: .hidePanel, object: nil)
                 } label: {
                     Label("VSCode", systemImage: "chevron.left.forwardslash.chevron.right")
-                        .font(.caption)
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.vertical, 10)
 
             Divider()
 
+            // Notifications
             if project.notifications.isEmpty {
                 Text("No notifications")
                     .font(.caption)
@@ -68,6 +73,7 @@ struct ProjectColumnView: View {
 
             Spacer(minLength: 0)
 
+            // Footer
             Divider()
             HStack {
                 if !project.notifications.isEmpty {
@@ -98,11 +104,5 @@ struct ProjectColumnView: View {
             .padding(8)
         }
         .frame(width: 280)
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(.separator, lineWidth: 1)
-        )
     }
 }
