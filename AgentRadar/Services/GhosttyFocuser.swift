@@ -1,26 +1,35 @@
 import Foundation
 
 struct GhosttyFocuser {
-    static func focusTerminal(shellPID: Int) {
-        let cacheFile = "/tmp/ghostty-claude-\(shellPID)"
-        guard let contents = try? String(contentsOfFile: cacheFile, encoding: .utf8) else { return }
-
-        let lines = contents.components(separatedBy: "\n").filter { !$0.isEmpty }
-        guard lines.count >= 2 else { return }
-
-        let winID = lines[0]
-        let tabID = lines[1]
-
+    static func focusTerminal(pwd: String) {
         let script = """
         tell application "Ghostty"
-            activate
-            set t to tab id "\(tabID)" of window id "\(winID)"
-            select tab t
+            set wlist to every window
+            repeat with w in wlist
+                set tabList to every tab of w
+                repeat with t in tabList
+                    set term to focused terminal of t
+                    set termDir to working directory of term
+                    if termDir is "\(pwd)" then
+                        set wName to name of w
+                        select tab t
+                        tell application "System Events"
+                            tell process "Ghostty"
+                                set frontmost to true
+                                perform action "AXRaise" of (first window whose name is wName)
+                            end tell
+                        end tell
+                        return
+                    end if
+                end repeat
+            end repeat
         end tell
         """
 
-        var error: NSDictionary?
-        NSAppleScript(source: script)?.executeAndReturnError(&error)
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", script]
+        try? process.run()
     }
 
     static func openInVSCode(path: String) {

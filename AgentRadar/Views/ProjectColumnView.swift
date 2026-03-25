@@ -28,19 +28,17 @@ struct ProjectColumnView: View {
 
             HStack(spacing: 8) {
                 Button {
-                    if let pid = project.shellPID {
-                        GhosttyFocuser.focusTerminal(shellPID: pid)
-                    }
+                    GhosttyFocuser.focusTerminal(pwd: project.id)
                     store.clearNotifications(for: project.id)
                     NotificationCenter.default.post(name: .hidePanel, object: nil)
                 } label: {
                     Label("Terminal", systemImage: "terminal")
                         .font(.caption)
                 }
-                .disabled(project.shellPID == nil)
 
                 Button {
                     GhosttyFocuser.openInVSCode(path: project.id)
+                    NotificationCenter.default.post(name: .hidePanel, object: nil)
                 } label: {
                     Label("VSCode", systemImage: "chevron.left.forwardslash.chevron.right")
                         .font(.caption)
