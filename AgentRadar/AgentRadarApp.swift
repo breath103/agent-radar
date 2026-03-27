@@ -19,7 +19,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: NSPanel!
     private let store = ProjectStore()
     private var watcher: NotificationWatcher?
-    private var hotKeyRefs: [EventHotKeyRef?] = []
+    private var hotKeyRefR: EventHotKeyRef?
+    private var hotKeyRefL: EventHotKeyRef?
+    private var blinkTimer: Timer?
+    private var blinkState = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -49,7 +52,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         panel.backgroundColor = .clear
 
         let w = NotificationWatcher(store: store) { [weak self] in
-            self?.showPanel()
+            self?.startBlinking()
         }
         w.start()
         watcher = w
@@ -65,6 +68,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if panel.isVisible {
             panel.orderOut(nil)
         } else {
+            stopBlinking()
             positionPanelBelowStatusItem()
             panel.makeKeyAndOrderFront(nil)
             NSApplication.shared.activate(ignoringOtherApps: true)
@@ -87,6 +91,43 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func showPanel() {
         positionPanelBelowStatusItem()
         panel.orderFrontRegardless()
+    }
+
+    private func startBlinking() {
+        registerJumpHotkey()
+        guard blinkTimer == nil else { return }
+        blinkState = false
+        let timer = Timer(timeInterval: 0.6, repeats: true) { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.blinkState.toggle()
+                self.updateStatusIcon()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        blinkTimer = timer
+        // Immediately show first blink state
+        blinkState = true
+        updateStatusIcon()
+    }
+
+    private func stopBlinking() {
+        blinkTimer?.invalidate()
+        blinkTimer = nil
+        blinkState = false
+        updateStatusIcon()
+        unregisterJumpHotkey()
+    }
+
+    private func updateStatusIcon() {
+        guard let button = statusItem.button else { return }
+        let symbolName = "antenna.radiowaves.left.and.right"
+        if blinkTimer != nil {
+            let config = NSImage.SymbolConfiguration(paletteColors: [blinkState ? .systemGreen : .white])
+            button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "AgentRadar")?.withSymbolConfiguration(config)
+        } else {
+            button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "AgentRadar")
+        }
     }
 
     private func installGlobalHotkeys() {
@@ -117,23 +158,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             eventSpec.count, &eventSpec, refcon, &handlerRef
         )
 
-        // Cmd+Shift+R (keycode 15)
-        var hotKeyID1 = EventHotKeyID(signature: OSType(0x4147_5244), id: 1) // "AGRD"
-        var hotKeyRef1: EventHotKeyRef?
+        // Cmd+Shift+R — always registered
+        let hotKeyID1 = EventHotKeyID(signature: OSType(0x4147_5244), id: 1)
         RegisterEventHotKey(UInt32(kVK_ANSI_R), UInt32(cmdKey | shiftKey),
-                            hotKeyID1, GetApplicationEventTarget(), 0, &hotKeyRef1)
-        hotKeyRefs.append(hotKeyRef1)
+                            hotKeyID1, GetApplicationEventTarget(), 0, &hotKeyRefR)
+    }
 
-        // Cmd+Shift+L (keycode 37)
-        var hotKeyID2 = EventHotKeyID(signature: OSType(0x4147_5244), id: 2) // "AGRD"
-        var hotKeyRef2: EventHotKeyRef?
+    func registerJumpHotkey() {
+        guard hotKeyRefL == nil else { return }
+        let hotKeyID2 = EventHotKeyID(signature: OSType(0x4147_5244), id: 2)
         RegisterEventHotKey(UInt32(kVK_ANSI_L), UInt32(cmdKey | shiftKey),
-                            hotKeyID2, GetApplicationEventTarget(), 0, &hotKeyRef2)
-        hotKeyRefs.append(hotKeyRef2)
+                            hotKeyID2, GetApplicationEventTarget(), 0, &hotKeyRefL)
+    }
+
+    func unregisterJumpHotkey() {
+        guard let ref = hotKeyRefL else { return }
+        UnregisterEventHotKey(ref)
+        hotKeyRefL = nil
     }
 
     private func goToLastNotifiedTerminal() {
-        guard let project = store.projects.max(by: { $0.lastActivity < $1.lastActivity }) else { return }
+        guard let project = store.projects.filter({ !$0.notifications.isEmpty }).max(by: { $0.lastActivity < $1.lastActivity }) else { return }
+        stopBlinking()
         GhosttyFocuser.focusTerminal(pwd: project.id)
         store.clearNotifications(for: project.id)
         hidePanel()
